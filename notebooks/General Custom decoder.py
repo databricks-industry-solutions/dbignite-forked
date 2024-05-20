@@ -77,7 +77,7 @@ class CustomDecoder():
         elif target_type == bool:
             converted_value = bool(value)
         elif target_type == list:
-            converted_value = value.split(delimiter=",")
+            converted_value = value.split(" ")
         else: 
             converted_value = value
         return converted_value
@@ -95,7 +95,7 @@ class CustomDecoder():
         """
 
         if isinstance(value, list):
-            converted_value = ",".join(str(item) for item in value)
+            converted_value = " ".join(str(item) for item in value)
         else:
             converted_value = str(value)
         return converted_value
@@ -113,7 +113,7 @@ class myHospitalPatient:
         return f"myHospitalPatient(name={self.name}, surname={self.surname}, age={self.age}, salary={self.salary})"
     
 class InternalPatient:
-    def __init__(self, given_name: str, lastname: str, age: int, my_salary: float):
+    def __init__(self, given_name: list, lastname: str, age: int, my_salary: float):
         self.given_name = given_name
         self.lastname = lastname
         self.age = age
@@ -130,7 +130,11 @@ d.decode()
 
 # COMMAND ----------
 
-myHospitalPatient_obj = myHospitalPatient(name="Name", surname="Surname", age=23, salary="1300.7")
+myHospitalPatient_obj = myHospitalPatient(name="FirstName SecondName", surname="Surname", age=23, salary="1300.7")
 d = CustomDecoder(myHospitalPatient_obj, InternalPatient)
 print(d.decode())
 print(type(d.decode().my_salary))
+
+# COMMAND ----------
+
+
