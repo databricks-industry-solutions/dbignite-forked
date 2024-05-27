@@ -1,4 +1,110 @@
 # Databricks notebook source
+# MAGIC %md ### Version 3 (Latest)
+
+# COMMAND ----------
+
+from typing import Any, Type, Callable, Dict
+
+class Converter:
+    """
+    A class for converting values between different types.
+    """
+    
+    DIRECT_MAPPINGS = {"int", "float", "str", "bool"}
+    LOGICAL_MAPPINGS = {
+        ("str", "list"): lambda x, *args, **kwargs: x.split(*args, **kwargs),
+        ("list", "str"): lambda x, *args, **kwargs: " ".join(str(item) for item in x),
+    }
+
+    def __new__(cls, value: Any, target_type: Type, *args, **kwargs) -> Any:
+        """
+        Converts the value to the specified target type.
+
+        Parameters:
+            value (Any): The value to be converted.
+            target_type (Type): The target type to convert the value to.
+ 
+        Returns:
+            Any: The converted value in the target type.
+        """
+        
+        source_type_name = type(value).__name__
+        target_type_name = target_type.__name__
+
+        if source_type_name == target_type_name:
+            return value
+        elif {source_type_name, target_type_name}.issubset(cls.DIRECT_MAPPINGS):
+            return target_type(value)
+        else:
+            conversion_key = (source_type_name, target_type_name)
+            if conversion_key in cls.LOGICAL_MAPPINGS:
+                return cls.LOGICAL_MAPPINGS[conversion_key](value, *args, **kwargs)
+            else:
+                raise ValueError(f"Conversion from {source_type_name} to {target_type_name} is not supported.")
+
+# COMMAND ----------
+
+s1 = Converter("5", int)                                   
+s2 = Converter("5.4", float)                                
+s3 = Converter("one,two,three", list, sep=',', maxsplit=1)  
+s4 = Converter(5, str)                                
+s5 = Converter(5, float)
+s6 = Converter(5.4, float)
+s7 = Converter(5.4, int)
+s8 = Converter(["one", "two", "three"], str)
+
+# COMMAND ----------
+
+# MAGIC %md ### Version 2
+
+# COMMAND ----------
+
+class TypeConverter:
+    """
+    A class for converting values between different types.
+    """
+    def __new__(cls, value: Any, target_type: Type, *args, **kwargs) -> Any:
+        """
+        Converts the value to the specified target type.
+
+        Parameters:
+            value (Any): The value to be converted.
+            target_type (Type): The target type to convert the value to.
+ 
+        Returns:
+            Any: The converted value in the target type.
+        """
+        MAPPINGS = {
+            ("str", "int"): int,
+            ("str", "float"): float,
+            ("str", "bool"): bool,
+            ("str", "list"): lambda x: x.split(*args, **kwargs),
+            ("int", "str"): str,
+            ("int", "float"): float,
+            ("int", "bool"): bool,
+            ("float", "str"): str,
+            ("float", "int"): int,
+            ("float", "bool"): bool,
+            ("bool", "str"): str,
+            ("bool", "int"): int,
+            ("bool", "float"): float,
+            ("list", "str"): lambda x: " ".join(str(x_) for x_ in x),
+        }
+        
+        source_type_name = type(value).__name__
+        target_type_name = target_type.__name__
+        
+        if source_type_name == target_type_name:
+            return value
+        else:
+            return MAPPINGS[(source_type_name, target_type_name)](value)
+
+# COMMAND ----------
+
+# MAGIC %md ### Version 1
+
+# COMMAND ----------
+
 
 from typing import Any, Dict, Type, TypeVar
 
