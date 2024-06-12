@@ -1,9 +1,4 @@
 # Databricks notebook source
-# MAGIC %md
-# MAGIC Separate Output of JSON Entries from Multiple Bundles
-
-# COMMAND ----------
-
 import json
 import os
 from collections import Counter
@@ -33,11 +28,6 @@ def print_entries(entries):
 entries_list = list(entries)
 print_entries(entries_list)
 
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Splitting FHIR Bundles into Separate NDJSON Files
 
 # COMMAND ----------
 
@@ -77,11 +67,6 @@ for i, output_file_path in enumerate(output_file_paths, 1):
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC Merging FHIR Bundles into a Single NDJSON File
-
-# COMMAND ----------
-
 import json
 import os
 
@@ -114,60 +99,103 @@ print(f"All patient data saved successfully to: {output_file_path}")
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC fhir to ndjson 
+
+def read_json(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
+
+def extract_entry_types(bundle):
+    return [entry.get('resource', {}).get('resourceType') for entry in bundle.get('entry', [])]
+
+# Map JSON data to entry types
+bundles = map(read_json, sample_data_paths)
+entry_types = sum(map(extract_entry_types, bundles), [])
+
+# Count the occurrences of each entry type
+entry_type_counts = Counter(entry_types)
+
+# Print the entry type counts
+print("Entry Type Distribution:")
+for entry_type, count in entry_type_counts.items():
+    print(f"{entry_type}: {count}")
 
 # COMMAND ----------
 
-import os
-# Define df
-from dbignite.readers import read_from_directory
 
-sample_data_1 = "../sampledata/Abe_Bernhard_4a0bf980-a2c9-36d6-da55-14d7aa5a85d9.json"
-sample_data_2 = "../sampledata/Abe_Huels_cec871b4-8fe4-03d1-4318-b51bc279f004.json"
-sample_data_3 = "../sampledata/Abraham_Wiza_1f9211d6-4232-4e9e-0e9b-37b18575e22f.json"
-tmp_path = "/tmp/sampledata"
-# dbutils.fs.cp("file:" + sample_data_1, tmp_path + "/temp1.json", True)
-# dbutils.fs.cp("file:" + sample_data_2, tmp_path + "/temp2.json", True)
-# dbutils.fs.cp("file:" + sample_data_3, tmp_path + "/temp3.json", True)
-sample_data_1 = os.path.abspath(sample_data_1)
-sample_data_2 = os.path.abspath(sample_data_2)
-sample_data_3 = os.path.abspath(sample_data_3)
+import pandas as pd
 
-bundle = read_from_directory(tmp_path)
-df = bundle.entry()
+def extract_care_plans(bundle):
+    care_plans = []
+    for entry in bundle.get('entry', []):
+        resource = entry.get('resource', {})
+        if resource.get('resourceType') == 'CarePlan':
+            care_plans.append(resource)
+    return care_plans
 
-# Define df_to_ndjson function
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import explode, lit, struct, to_json, regexp_replace
+# Map JSON data to care plans
+bundles = map(read_json, sample_data_paths)
+care_plans_by_patient = {}
 
-def df_to_ndjson(df: DataFrame, resource_type: str) -> DataFrame:
-    return (df
-            .withColumn(resource_type, explode(resource_type))
-            .withColumn("resourceType", lit(resource_type))
-            .select(
-                to_json(
-                    struct(
-                        lit(resource_type).alias("resourceType"), 
-                        f"{resource_type}.*"
-                    )
-                ).alias("ndjson")
-            )
-            .withColumn("ndjson", regexp_replace("ndjson", "\\\\(.?)", "$1"))
-            # .selectExpr("concat(ndjson, '\\n') as ndjson")  # Add newline delimiter
-            )
+for bundle in bundles:
+    patient_id = None
+    for entry in bundle.get('entry', []):
+        resource = entry.get('resource', {})
+        if resource.get('resourceType') == 'Patient':
+            patient_id = resource.get('id')
+            break
+    if patient_id:
+        care_plans_by_patient[patient_id] = extract_care_plans(bundle)
 
-# Call df_to_ndjson function 
-resource_types = ["Encounter", "Claim"]
+# Create DataFrame from care plans
+care_plan_data = []
+for patient_id, care_plans in care_plans_by_patient.items():
+    for care_plan in care_plans:
+        care_plan_data.append({'PatientID': patient_id, 'CarePlan': care_plan})
 
-ndjson_objects = {}
-for rtype in resource_types:
-    transformed_df = df_to_ndjson(df, rtype)
-    ndjson_objects[rtype] = transformed_df.collect()
+care_plan_df = pd.DataFrame(care_plan_data)
 
-# Print or use ndjson_objects as needed
-ndjson_objects
+# Print the DataFrame
+print(care_plan_df)
 
+# COMMAND ----------
+
+
+def read_json(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
+
+def extract_care_plans(bundle):
+    care_plans = []
+    for entry in bundle.get('entry', []):
+        resource = entry.get('resource', {})
+        if resource.get('resourceType') == 'CarePlan':
+            care_plans.append(resource)
+    return care_plans
+
+# Map JSON data to care plans
+bundles = map(read_json, sample_data_paths)
+care_plans_by_patient = {}
+
+for bundle in bundles:
+    patient_id = None
+    for entry in bundle.get('entry', []):
+        resource = entry.get('resource', {})
+        if resource.get('resourceType') == 'Patient':
+            patient_id = resource.get('id')
+            break
+    if patient_id:
+        care_plans_by_patient[patient_id] = extract_care_plans(bundle)
+
+# Create DataFrame from care plans
+care_plan_data = []
+for patient_id, care_plans in care_plans_by_patient.items():
+    for care_plan in care_plans:
+        care_plan_data.append({'PatientID': patient_id, 'CarePlan': care_plan})
+
+care_plan_df = pd.DataFrame(care_plan_data)
+
+# Print only the 'CarePlan' column
+print(care_plan_df['CarePlan'])
 
 # COMMAND ----------
 
