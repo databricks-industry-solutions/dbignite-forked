@@ -201,10 +201,19 @@ class BundleFhirResource(FhirResource):
         self.entry().select(col("bundleUUID"), col("timestamp"),col("id"),column).write.mode(write_mode).saveAsTable( (location + "." + column).lstrip("."))
 
     #
-    # Returns a string representing ndjson for each grouping/bundle of FHIR resources
+    # Returns an ndjson representation of the data in column_name
     #
-    def get_ndjson_resources(self):
-        pass
+    def _get_ndjson_resources(self, column_name):
+        return ( bundle.entry()
+                 .select(transform(col(column_name), lambda x: to_json(x)).alias("jdata"))
+                 .select(reduce("jdata", lit(""), lambda a,b: concat_ws("\\n", a,b)).alias("merged_json"))
+                )
+    #return '\\n'.join(bundle.entry().select(transform(col(column_name), lambda x: to_json(x)).alias("jdata")).rdd.take(1)[0].jdata)
+
+    def get_ndjson_resources(self, column_list = None):
+        if column_list == None:
+            column_list = [c for c in self.entry().columns if c not in ["id", "timestamp", "bundleUUID"]]
+        return None #TODO
 
     #
     # Returns a string representing FHIR Bundles for each groupin gof resources
