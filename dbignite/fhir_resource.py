@@ -202,21 +202,20 @@ class BundleFhirResource(FhirResource):
 
     #
     # Returns an ndjson representation of the data in column_name
+    #  TODO remove newline characters embedded in double quotes optionally
+    #              regexp_replace('col','[\b\n\r]','*')) 
     #
     def _get_ndjson_resources(self, column_name):
-        return ( bundle.entry()
-                 .select(transform(col(column_name), lambda x: to_json(x)).alias("jdata"))
-                 .select(reduce("jdata", lit(""), lambda a,b: concat_ws("\\n", a,b)).alias("merged_json"))
-                )
+        return (
+            reduce(transform(column_name, lambda x: to_json(x)),
+                   lit(""),
+                   lambda a,b: concat_ws("\n", a,b)
+                   )
+            ).alias(column_name + "_ndjson")
     #return '\\n'.join(bundle.entry().select(transform(col(column_name), lambda x: to_json(x)).alias("jdata")).rdd.take(1)[0].jdata)
 
     def get_ndjson_resources(self, column_list = None):
         if column_list == None:
             column_list = [c for c in self.entry().columns if c not in ["id", "timestamp", "bundleUUID"]]
-        return None #TODO
+        return self.entry().select(concat_ws("", *[self._get_ndjson_resources(c) for c in column_list]))
 
-    #
-    # Returns a string representing FHIR Bundles for each groupin gof resources
-    #
-    def get_bundle_resources(self):
-        pass
