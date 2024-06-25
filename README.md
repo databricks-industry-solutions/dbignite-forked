@@ -24,6 +24,10 @@ This library is designed to provide a low friction entry to performing analytics
 
 # Usage
 
+## Requirements
+
+*For writing FHIR data Pyspark 3.5.0 is required but not enforced in package install*
+
 ## Installation
 ```
 pip install git+https://github.com/databrickslabs/dbignite.git

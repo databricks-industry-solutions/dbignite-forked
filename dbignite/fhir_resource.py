@@ -212,7 +212,6 @@ class BundleFhirResource(FhirResource):
                    lambda a,b: concat_ws("\n", a,b)
                    )
             ).alias(column_name + "_ndjson")
-    #return '\\n'.join(bundle.entry().select(transform(col(column_name), lambda x: to_json(x)).alias("jdata")).rdd.take(1)[0].jdata)
 
     def get_ndjson_resources(self, column_list = None):
         if column_list == None:
