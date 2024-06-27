@@ -34,7 +34,7 @@ class TestReaders(PysparkBaseTest):
         #TODO Liburna: 
         # 1. Write out temp data as ndjson (the function is "get_ndjson_resources" of the bundle)
         # 2. Read it back in using dbignite 
-        # 3. Compare original data in "bundle" above to data read back in (#2). These should match 
+        # 3. Compare original data in "bundle" above to data read back in (#2). Use the assertion methods like above. Rows and columns should match, pick a few to test against.
         #  The embedded newline issues may need to be addressed: 
         #      addressing on read: https://github.com/databricks-industry-solutions/dbignite-forked/blob/write-fhir-bundle-to-ndjson/dbignite/fhir_resource.py#L112
         #      addressing on write: (add an optional flag that strips out newline characters embedded in double quotes) https://github.com/databricks-industry-solutions/dbignite-forked/blob/write-fhir-bundle-to-ndjson/dbignite/fhir_resource.py#L208-L219
