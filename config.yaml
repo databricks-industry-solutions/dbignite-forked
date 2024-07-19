@@ -1,0 +1,69 @@
+SEVERITY_CODES:
+  "1": "mild"
+  "2": "moderate"
+  "3": "severe"
+  "4": "serious"
+
+OUTCOME_CODES:
+  "1": "resolved"
+  "2": "recovering"
+  "3": "not-recovered"
+  "4": "recovered-with-sequelae"
+  "5": "fatal"
+  "6": "unknown"
+
+ACTUALITY_VALUES:
+  - "actual"
+  - "potential"
+
+mappings:
+  FA_IRB_NUMBER:
+    - identifier
+    - "{'system': 'urn:uuid', 'value': str(x)}"
+  FA_SPONSOR_STUDY_NUMBER:
+    - study
+    - "[{'reference': f\"ResearchStudy/{x}\"}]"
+  FA_SUBJECT_MRN:
+    - subject
+    - "{'reference': f\"Patient/{x}\"}"
+  FA_PROTOCOL_SUBJECT_ID:
+    - identifier
+    - "{'system': 'urn:uuid', 'value': str(x)}"
+  FA_SUBJECT_STUDY_ID:
+    - identifier
+    - "{'system': 'urn:uuid', 'value': str(x)}"
+  FA_ADVERSE_EVENT_NO:
+    - identifier
+    - "{'system': 'urn:uuid', 'value': str(x)}"
+  FA_ADVERSE_EVENT_SEQ_NO:
+    - identifier
+    - "{'system': 'urn:uuid', 'value': str(x)}"
+  FA_START_DATE:
+    - date
+    - "safe_date_convert(x)"
+  FA_GRADE:
+    - severity
+    - "{'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/adverse-event-severity', 'code': SEVERITY_CODES.get(str(x))}]} if SEVERITY_CODES.get(str(x)) else None"
+  FA_COMMENTS:
+    - text
+    - "{'status': 'generated', 'div': f\"<div xmlns='http://www.w3.org/1999/xhtml'>{x}</div>\"}"
+  FA_OUTCOME:
+    - outcome
+    - "{'coding': [{'system': 'http://terminology.hl7.org/CodeSystem/adverse-event-outcome', 'code': OUTCOME_CODES.get(str(x))}]} if OUTCOME_CODES.get(str(x)) else None"
+
+fhir_adverse_event:
+  resourceType: "AdverseEvent"
+  actuality: "actual"
+  text:
+    status: "generated"
+    div: "<div xmlns='http://www.w3.org/1999/xhtml'>Adverse event details</div>"
+
+bundle:
+  resourceType: "Bundle"
+  type: "transaction"
+  entry:
+    - fullUrl: "urn:uuid:{id}"
+      resource: fhir_adverse_event
+      request:
+        method: "POST"
+        url: "AdverseEvent"
