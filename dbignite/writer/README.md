@@ -81,7 +81,7 @@ Extensions typically involve mapping multiple elements into an array together. T
 
 e.g. "code1" + "system1" + "code2" + "system2" -> [{"code1", "system1"}, {"code2", "system2"}]
 
-This can be done in either the Dataframe creation step or 
+This can be done in either the Dataframe creation step or lambda encoder.
 
 ```python
 TODO DataFrame creation
