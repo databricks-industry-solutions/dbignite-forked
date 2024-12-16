@@ -151,21 +151,21 @@ from claims
 """)
 df.show(truncate=False)
 """
-{code -> PRCDR11, system -> http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets} , {code -> DX11, system -> http://terminology.hl7.org/CodeSystem/icd9cm}
-{code -> PRCDR21, system -> http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets} , {code -> DX21, system -> http://terminology.hl7.org/CodeSystem/icd9cm}
+{valuecode -> PRCDR11, url -> http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets} , {valuecode -> DX11, url -> http://terminology.hl7.org/CodeSystem/icd9cm}
+{valuecode -> PRCDR21, url -> http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets} , {valuecode -> DX21, url -> http://terminology.hl7.org/CodeSystem/icd9cm}
 """
 
 maps = [
-	Mapping('codeset_prcdr', 'Claim.procedure.procedureCodeableConcept.coding'),
-	Mapping('codeset_dx', 'Claim.diagnosis.diagnosisCodeableConcept.coding')]
+	Mapping('codeset_prcdr', 'Claim.extension.coding'),
+	Mapping('codeset_dx', 'Claim.extension.coding')]
 
 em = FhirEncoderManager(override_encoders ={
-    "Claim.procedure.procedureCodeableConcept.coding": 
-      FhirEncoder(False, False, lambda x:print(x))})
+    "Claim.extension.coding": 
+      FhirEncoder(False, False, lambda x: x[0] )})
 
 m = MappingManager(maps, df.schema, em) 
 b = Bundle(m)
-b.df_to_fhir(data).map(lambda x: json.loads(x)).foreach(lambda x: print(json.dumps(x, indent=4)))
+b.df_to_fhir(df).map(lambda x: json.loads(x)).foreach(lambda x: print(json.dumps(x, indent=4)))
 ```
 
 ```python
@@ -176,5 +176,10 @@ TODO custom lambda function
 # Common Errors
 
 ## Encoder doesn't exist yet
+
+1. This means there does not exist a DEFAULT_ENCODER for one of the fields in the mapping source to target. Extend FhirEncoderManager with a function of either override_encoders or add to default encoderes to resolve
+AttributeError: 'dict' object has no attribute 'f'
+
+2. 
 
 ## Encoder data type doesn't match expected value
