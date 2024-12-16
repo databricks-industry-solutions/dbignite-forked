@@ -5,28 +5,19 @@
 Dataframes are the source for converting to FHIR. This can be a single table or a transformed table from a SQL Statement
 
 ```python
-#Read in a DataFrame to convert to FHIR. Data is publicly downloaded from CMS SynPUF
-
-from dbignite.writer.fhir_encoder import *
+#Read in a DataFrame and convert to FHIR. Using dummy data with claim id, procedure codes, and diagnosis codes.
 from dbignite.writer.bundler import *
+from dbignite.writer.fhir_encoder import *
 import json
 
-data = spark.sql("""
-select 
---Patient info
-b.DESYNPUF_ID, --Patient.id
-b.BENE_BIRTH_DT, --Patient.birthDate
-b.BENE_COUNTY_CD, --Patient.address.postalCode
-c.CLM_ID,  --Claim.id
-c.HCPCS_CD_1, --Claim.procedure.procedureCodeableConcept.coding.code
-c.HCPCS_CD_2, --Claim.procedure.procedureCodeableConcept.coding.code
-c.ICD9_DGNS_CD_1, --Claim.diagnosis.diagnosisCodeableConcept.coding.code
-c.ICD9_DGNS_CD_2, --Claim.diagnosis.diagnosisCodeableConcept.coding.code
-"http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets" as hcpcs_cdset
-from hls_healthcare.hls_cms_synpuf.ben_sum b 
-    inner join hls_healthcare.hls_cms_synpuf.car_claims c 
-        on c.DESYNPUF_ID = b.DESYNPUF_ID
-                 """)
+data = spark.createDataFrame(
+[('CLM1', 'PRCDR11', 'PRCDR12', 'PRCDR13', 'DX11', 'DX12', 'DX13'),
+ ('CLM1', 'PRCDR21', 'PRCDR22', 'PRCDR23', 'DX21', 'DX22', 'DX23')],
+['CLAIM_ID', 'PRCDR_CD1', 'PRCDR_CD2', 'PRCDR_CD3', 'DX_CD1', 'DX_CD2', 'DX_CD3'])
+"""
+This command could also be
+data = spark.sql("SELECT CLM_ID, PRCDR_CD1, PRCDR_CD2, PRCDR_CD3, DX_CD1, DX_CD2, DX_CD3 FROM...")
+"""
 ```
 
 ## How do transformations happen without writing code? 
@@ -37,6 +28,59 @@ e.g. an array of strings is mapped to a string by the default behavior of [conca
 ```python
 FhirEncoder(False, False, lambda x: ','.join(x))
 ```
+
+e.g. to demonstrate an array of values mapping to a single string, can do the following
+```python
+maps = [
+	Mapping('PRCDR_CD1', 'Claim.procedure.procedureCodeableConcept.coding.code'),
+	Mapping('PRCDR_CD2', 'Claim.procedure.procedureCodeableConcept.coding.code'),
+	Mapping('PRCDR_CD3', 'Claim.procedure.procedureCodeableConcept.coding.code')]
+
+m = MappingManager(maps, data.schema)
+b = Bundle(m)
+b.df_to_fhir(data).map(lambda x: json.loads(x)).foreach(lambda x: print(json.dumps(x, indent=4)))
+
+
+"""
+{..."resourceType": "Bundle", ...
+	"coding":[{
+	-->	"code": "PRCDR21,PRCDR22,PRCDR23"
+	}]
+...}
+"""
+```
+
+However, each code should be it's own value in the "coding" array and not as one single value. I can extend the lambda framework with specifying the transformation at the target column, e.g. 
+
+```python
+#maps...
+em = FhirEncoderManager(
+  override_encoders ={
+    "Claim.procedure.procedureCodeableConcept.coding": 
+      FhirEncoder(False, False, lambda x: [{"code": y} for y in x[0].get("code").split(",")])
+})
+"""
+ ^^ Run this function instead when building values under "coding".
+x =  [ {"code": "PRCDR21,PRCDR22,PRCDR23"} ]
+x[0].get("code").split(",") -> ['PRCDR21', 'PRCDR22', 'PRCDR23']
+lambda returns -> [{'code': 'PRCDR21'}, {'code': 'PRCDR22'}, {'code': 'PRCDR23'}]
+"""
+
+
+m = MappingManager(maps, data.schema, em) 
+b = Bundle(m)
+"""
+{..."resourceType": "Bundle", ...
+  "coding": [
+    { "code": "PRCDR21" },
+    { "code": "PRCDR22" },
+    { "code": "PRCDR23" }
+  ]
+}
+"""
+```
+
+
 ## Mapping from Source to FHIR Specification
 
 ```python
