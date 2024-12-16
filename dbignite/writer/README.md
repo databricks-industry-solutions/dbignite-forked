@@ -145,7 +145,7 @@ This can be done in either the Dataframe creation step or lambda encoder.
 from pyspark.sql.functions import *
 data.createOrReplaceTempView("claims")
 df = spark.sql("""
-SELECT array(map('code', prcdr_cd1, 'system', 'http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets')) as codeset_prcdr,
+SELECT map('code', prcdr_cd1, 'system', 'http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets') as codeset_prcdr,
 map('code', dx_cd1, 'system', 'http://terminology.hl7.org/CodeSystem/icd9cm') as codeset_dx
 from claims
 """)
@@ -156,16 +156,29 @@ df.show(truncate=False)
 """
 
 maps = [
-	Mapping('codeset_prcdr', 'Claim.extension.coding'),
-	Mapping('codeset_dx', 'Claim.extension.coding')]
+	Mapping('codeset_prcdr', 'Claim.extension'),
+	Mapping('codeset_dx', 'Claim.extension')]
 
 em = FhirEncoderManager(override_encoders ={
-    "Claim.extension.coding": 
-      FhirEncoder(False, False, lambda x: x[0] )})
+    "Claim.extension": 
+      FhirEncoder(False, False, lambda x: x )})
 
 m = MappingManager(maps, df.schema, em) 
 b = Bundle(m)
 b.df_to_fhir(df).map(lambda x: json.loads(x)).foreach(lambda x: print(json.dumps(x, indent=4)))
+
+"""
+ "extension": [
+{
+  "code": "PRCDR11",
+  "system": "http://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets"
+},
+{
+  "code": "DX11",
+  "system": "http://terminology.hl7.org/CodeSystem/icd9cm"
+}
+]
+"""
 ```
 
 ```python
