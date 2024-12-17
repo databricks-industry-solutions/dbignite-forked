@@ -166,7 +166,7 @@ class FhirEncoderManager():
             "string": FhirEncoder(False, False, lambda x: ','.join(x))
             },
         "integer": {
-            "string": FhirEncoder(False, True, lambda x: str)
+            "string": FhirEncoder(False, True, lambda x: str(x))
         },
         "struct": FhirEncoder(False, True, lambda l: dict(ChainMap(*l))),
         "array<struct>": FhirEncoder(False, True, lambda l: [dict(ChainMap(*l))] )  #default behavior to union dictionary
