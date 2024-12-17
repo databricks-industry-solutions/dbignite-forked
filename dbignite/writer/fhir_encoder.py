@@ -128,7 +128,7 @@ class FhirEncoder():
     def handle(self, f):
         def wrapper_func(*args, **kw):
             try:
-                return f(*args, **kw)
+                return ('' if f(*args, **kw) == None else f(*args, **kw))
             except:
                 return self.default
         return wrapper_func
